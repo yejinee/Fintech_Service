@@ -1,4 +1,4 @@
-// [ Object]
+// [ 4. Object]
 
 var car = {
     name: "sonata",

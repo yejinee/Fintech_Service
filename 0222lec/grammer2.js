@@ -1,4 +1,4 @@
-// [ 연산자 ]
+// [ 2. 연산자 ]
 
 var x = 5; // assign the value 5 to x
 var y = 2; // assign the value 2 to y

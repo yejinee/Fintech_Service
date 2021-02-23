@@ -1,5 +1,5 @@
 /*
-[ function ]
+[ 3. function ]
 function 함수명 (변수){
 }
 */
