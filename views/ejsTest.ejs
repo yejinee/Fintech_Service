@@ -1,0 +1,39 @@
+<!--ejs sample File-->
+<!DOCTYPE html>
+<h1>안녕하세요</h1>
+<h2>ejs 로 만든 페이지입니다.</h2>
+<input type="text" id="inputtext" />
+<input type="text" id="inputtext2" />
+<button id="firstbutton">버튼</button>
+<script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
+    crossorigin="anonymous"></script>
+<script>
+    //제이쿼리 이벤트 불러오기
+    $("#firstbutton").click(function () {
+        //alert('button click');
+        var userinput = $("#inputtext").val(); // input한 것의 값 가져옴
+        var userinput2 = $("#inputtext2").val();
+        alert("사용자 입력 데이터: " + userinput + userinput2);
+        /* Ajax기술 사용해서 : 동기적으로 데이터 받고 보냄. 
+                frontend의 데이터를 object형식으로 http전송
+                => jquery사용해서 할 것임 */
+        $.ajax({
+            url: "/userData",
+            type: "POST", //method선택(POST,GET,,)
+            data: { 
+                userDate1 : userinput, 
+                userDate2 : userinput2
+            },
+            success: function (data) {
+                // 요청이 끝난 뒤에 해야할 일 정의
+                console.log(data);
+                if(data==true){
+                    alert("요청 성공");
+                }
+
+            },
+        });
+    }) // click하면 기능 실행
+</script>
+
+</html>
