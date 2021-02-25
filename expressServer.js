@@ -4,7 +4,7 @@ const app = express();
 const request = require('request');
 var jwt = require('jsonwebtoken');
 var auth = require('./lib/auth'); //middleware
-
+//var moment = require('moment');
 // json타입에 데이터 전송 허용
 app.use(express.json());
 // form타입에 데이터 전송 허용
@@ -34,13 +34,32 @@ connection.connect();
 app.get('/', function (req, res) {
     res.send('Hello World');
 })
-
+app.get('/main', function (req, res) {
+    res.render('main');
+})
 app.get('/signup', function (req, res) {
     res.render('signup');
 })
 app.get('/login', function (req, res) {
     res.render('login');
 })
+app.get('/authTest', auth, function (req, res) {
+    res.send("정상적인 로그인");
+})
+app.get('/balance', function (req, res) {
+    res.render('balance');
+})
+app.get('/transactionList', function (req, res) {
+    res.render('transactionList');
+})
+app.get('/qrcode', function (req, res) {
+    res.render('qrcode');
+})
+app.get('/qrreader', function (req, res) {
+    res.render('qrreader');
+})
+
+
 // login부분 처리
 app.post('/login', function (req, res) {
     var userEmail = req.body.userEmail;
@@ -62,7 +81,7 @@ app.post('/login', function (req, res) {
             else { // 있는 경우 
                 var dbPassword = result[0].password;
                 if (dbPassword == userPassword) {
-                    var tokenKey = "f@i#n%tne#ckfhlafkd0102test!@#%"
+                    var tokenKey = "f@i#n%tne#ckfhlafkd0102test!@#%" // key가 고유값 가짐으로 사칭불가
                     // jwt lib사용
                     jwt.sign(
                         {
@@ -87,7 +106,6 @@ app.post('/login', function (req, res) {
             }
         }
     })
-
 })
 
 // signup 이후에 나오는 인증 페이지
@@ -117,7 +135,6 @@ app.get('/authResult', function (req, res) {
             var accessRequestResult = JSON.parse(body); //json파일로 오기때문에 파싱해서 오브젝트화 시킴
             console.log(accessRequestResult);
             res.render('resultChild', { data: accessRequestResult });
-
         }
     })
 })
@@ -144,12 +161,194 @@ app.post('/signup', function (req, res) {
             res.json(1);  // json으로 응답
         }
     });
+})
+// 아무나 접근할 수 없게 auth 추가
+app.post('/list', auth, function (req, res) {
+    var user = req.decoded;
+    console.log(user);
+    var sql = "SELECT * FROM user WHERE id = ?";
+    connection.query(sql, [user.userId], function (err, result) {
+        if (err) throw err;
+        else {
+            var dbUserData = result[0];
+            console.log("dbuser임")
+            console.log(dbUserData);
+            console.log(dbUserData.accesstoken);
+            var option = {
+                method: "GET",
+                url: "https://testapi.openbanking.or.kr/v2.0/user/me",
+                headers: {
+                    Authorization: "Bearer " + dbUserData.accesstoken
+                },
+                qs: {
+                    user_seq_no: dbUserData.userseqno
+                }
+            }
+            request(option, function (err, response, body) {
+                if (err) {
+                    console.error(err);
+                    throw err;
+                }
+                else {
+                    var listRequestResult = JSON.parse(body);
+                    console.log(listRequestResult);
+                    res.json(listRequestResult);
+                }
+            })
+        }
+    })
+})
+
+//사용자 정보 조회
+var companyId = "M202111591U";//이용기관 코드 + U
+app.post('/balance', auth, function (req, res) {
+    var user = req.decoded;
+    var finusernum = req.body.fin_use_num;
+    var countnum = Math.floor(Math.random() * 1000000000) + 1;
+    var transId = companyId + countnum;
+    //var transdtime = moment(new Date().format('YYYYMMDDhhmmss'));
+
+    var sql = "SELECT * FROM user WHERE id = ?";
+    connection.query(sql, [user.userId], function (err, result) {
+        if (err) throw err;
+        else {
+            var dbUserData = result[0];
+            console.log(dbUserData);
+            var option = {
+                method: "GET",
+                url: "https://testapi.openbanking.or.kr/v2.0/account/balance/fin_num",
+                headers: {
+                    Authorization: "Bearer " + dbUserData.accesstoken
+                },
+                qs: {
+                    bank_tran_id: transId,
+                    fintech_use_num: finusernum,
+                    tran_dtime: "20190910101921"
+                }
+            }
+
+            request(option, function (err, response, body) {
+                if (err) {
+                    console.error(err);
+                    throw err;
+                }
+                else {
+                    var balanceRquestResult = JSON.parse(body);
+                    console.log(balanceRquestResult);
+                    res.json(balanceRquestResult);
+                }
+            })
+        }
+    })
+})
+
+// 거래 내역 조회 
+app.post('/transactionList', auth, function (req, res) {
+    var user = req.decoded;
+    var finusernum = req.body.fin_use_num;
+    var countnum = Math.floor(Math.random() * 1000000000) + 1;
+    var transId = companyId + countnum;
+    //var transdtime = moment(new Date().format('YYYYMMDDhhmmss'));
+
+    var sql = "SELECT * FROM user WHERE id = ?";
+    connection.query(sql, [user.userId], function (err, result) {
+        if (err) throw err;
+        else {
+            var dbUserData = result[0];
+            console.log("이거 진행 완료")
+            console.log(dbUserData);
+            // TEST
+            var option = {
+                method: "GET",
+                url: "https://testapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num",
+                headers: {
+                    Authorization: "Bearer " + dbUserData.accesstoken
+                },
+                qs: {
+                    bank_tran_id: transId,
+                    fintech_use_num: finusernum,
+                    inquiry_type: 'A',
+                    inquiry_base: 'D',
+                    from_date: "20190101",
+                    to_date: "20190101",
+                    sort_order: "D",
+                    tran_dtime: "20200910101921"
+                }
+            }
+            request(option, function (err, response, body) {
+                if (err) {
+                    console.error(err);
+                    throw err;
+                }
+                else {
+                    var transactionRequestResult = JSON.parse(body);
+                    console.log(transactionRequestResult);
+                    res.json(transactionRequestResult);
+                }
+            })
+
+        }
+    })
 
 })
-app.get('/authTest', auth, function (req, res) {
-    res.send("정상적인 로그인");
+// 사용자 출금 이체 api설정
+/*
+app.post('/withdraw',auth,function(req,res){
+    var user = req.decoded;
+    var finusernum = req.body.fin_use_num;
+    var countnum = Math.floor(Math.random() * 1000000000) + 1;
+    var transId = companyId + countnum;
+    //var transdtime = moment(new Date().format('YYYYMMDDhhmmss'));
+
+    var sql = "SELECT * FROM user WHERE id = ?";
+    connection.query(sql, [user.userId], function (err, result) {
+        if (err) throw err;
+        else {
+            var dbUserData = result[0];
+            console.log(dbUserData);
+            // TEST
+            var option = {
+                method: "GET",
+                url: "https://testapi.openbanking.or.kr/v2.0/account/transaction_list/fin_num",
+                headers: {
+                    Authorization: "Bearer " + dbUserData.accesstoken
+                },
+                body: {
+                    bank_tran_id: transId,
+                    cntr_account_type: "N",
+                    cntr_account_num : "200000000001",
+                    dps_print_content : "쇼핑몰",
+                    fintech_use_num : "12345678901234567890 1234",
+                    wd_print_content : "오픈뱅킹출금",
+                    tran_amt : "10000",
+                    tran_dtime : "20190910101921",
+                    req_client_name : "홍길동",
+                    req_client_num : "HONGGILDONG1234",
+                    transfer_purpose
+                }
+            }
+            request(option, function(err,response,body){
+                if (err) {
+                    console.error(err);
+                    throw err;
+                }
+                else {
+                    var transactionRequestResult = JSON.parse(body);
+                    console.log(transactionRequestResult);
+                    res.json(transactionRequestResult);
+                }
+            })
+
+        }
+    })
+
 })
+*/
+
+
 app.listen(3000);
+
+
 
 /*
 //routing 주소 추가
@@ -173,4 +372,45 @@ app.post('/userData', function (req, res) {
 app.get('/designTest', function(req, res){
     res.render("designSample");
 })
+
+
+
+
+app.post('/rest', auth, function(req, res){
+    var user = req.decoded;
+    console.log(user);
+    var sql = "SELECT * FROM user WHERE id = ?";
+    connection.query(sql,[user.userId], function(err, result){
+        if(err) throw err;
+        else {
+            var dbUserData = result[0];
+            console.log(dbUserData);
+            var option = {
+                method : "GET",
+                url : "https://testapi.openbanking.or.kr/v2.0/account/balance/fin_nume",
+                headers : {
+                    Authorization : "Bearer " + dbUserData.accesstoken
+                },
+                qs : {
+                    bank_tran_id : dbUserData.userseqno
+                    fintech_use_num :
+                    tran_dtime :
+                }
+            }
+            request(option, function(err, response, body){
+                if(err){
+                    console.error(err);
+                    throw err;
+                }
+                else {
+                    var listRequestResult = JSON.parse(body);
+                    res.json(listRequestResult)
+
+                }
+            })
+        }
+    })
+})
+
 */
+
